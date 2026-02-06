@@ -9,7 +9,8 @@ export const binaryHashes: Record<string, string> = (() => {
   if (typeof ESBUILD_BINARY_HASHES === 'string') {
     try {
       return JSON.parse(ESBUILD_BINARY_HASHES)
-    } catch {
+    } catch (err) {
+      console.error('[esbuild] Warning: Failed to parse binary hashes:', err)
       return {}
     }
   }
