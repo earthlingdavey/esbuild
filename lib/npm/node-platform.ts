@@ -3,6 +3,18 @@ import os = require('os')
 import path = require('path')
 
 declare const ESBUILD_VERSION: string
+declare const ESBUILD_BINARY_HASHES: string | undefined
+
+export const binaryHashes: Record<string, string> = (() => {
+  if (typeof ESBUILD_BINARY_HASHES === 'string') {
+    try {
+      return JSON.parse(ESBUILD_BINARY_HASHES)
+    } catch {
+      return {}
+    }
+  }
+  return {}
+})()
 
 // This feature was added to give external code a way to modify the binary
 // path without modifying the code itself. Do not remove this because

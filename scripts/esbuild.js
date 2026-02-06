@@ -1,4 +1,5 @@
 const childProcess = require('child_process')
+const crypto = require('crypto')
 const path = require('path')
 const fs = require('fs')
 const os = require('os')
@@ -18,6 +19,9 @@ const buildNeutralLib = (esbuildPath) => {
   fs.mkdirSync(libDir, { recursive: true })
   fs.mkdirSync(binDir, { recursive: true })
 
+  // Compute binary hashes for integrity verification
+  const binaryHashes = computeBinaryHashes()
+
   // Generate "npm/esbuild/install.js"
   childProcess.execFileSync(esbuildPath, [
     path.join(repoDir, 'lib', 'npm', 'node-install.ts'),
@@ -29,6 +33,7 @@ const buildNeutralLib = (esbuildPath) => {
     // making it seem like esbuild's install script code changes with every
     // esbuild release. So now we read it from "package.json" instead.
     // '--define:ESBUILD_VERSION=' + JSON.stringify(version),
+    '--define:ESBUILD_BINARY_HASHES=' + JSON.stringify(JSON.stringify(binaryHashes)),
     '--external:esbuild',
     '--platform=node',
     '--log-level=warning',
@@ -84,6 +89,34 @@ const buildNeutralLib = (esbuildPath) => {
   const package_json = JSON.parse(fs.readFileSync(pjPath, 'utf8'))
   package_json.optionalDependencies = optionalDependencies
   fs.writeFileSync(pjPath, JSON.stringify(package_json, null, 2) + '\n')
+}
+
+const computeBinaryHashes = () => {
+  const hashes = {}
+  const scopeDir = path.join(repoDir, 'npm', '@esbuild')
+  
+  if (!fs.existsSync(scopeDir)) {
+    return hashes
+  }
+  
+  for (const pkgDir of fs.readdirSync(scopeDir)) {
+    const pkgPath = path.join(scopeDir, pkgDir)
+    if (!fs.statSync(pkgPath).isDirectory()) continue
+    
+    const pkgName = `@esbuild/${pkgDir}`
+    
+    // Determine binary path based on platform
+    const isWindows = pkgDir.startsWith('win32-')
+    const binarySubpath = isWindows ? 'esbuild.exe' : 'bin/esbuild'
+    const binaryPath = path.join(pkgPath, binarySubpath)
+    
+    if (fs.existsSync(binaryPath)) {
+      const content = fs.readFileSync(binaryPath)
+      hashes[pkgName] = crypto.createHash('sha256').update(content).digest('hex')
+    }
+  }
+  
+  return hashes
 }
 
 async function generateWorkerCode({ esbuildPath, wasm_exec_js, minify, target }) {

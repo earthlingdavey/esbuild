@@ -1,4 +1,4 @@
-import { downloadedBinPath, ESBUILD_BINARY_PATH, isValidBinaryPath, pkgAndSubpathForCurrentPlatform } from './node-platform'
+import { downloadedBinPath, ESBUILD_BINARY_PATH, isValidBinaryPath, pkgAndSubpathForCurrentPlatform, binaryHashes } from './node-platform'
 
 import fs = require('fs')
 import os = require('os')
@@ -6,6 +6,7 @@ import path = require('path')
 import zlib = require('zlib')
 import https = require('https')
 import child_process = require('child_process')
+import crypto = require('crypto')
 
 const versionFromPackageJSON: string = require(path.join(__dirname, 'package.json')).version
 const toPath = path.join(__dirname, 'bin', 'esbuild')
@@ -225,7 +226,27 @@ async function downloadDirectlyFromNPM(pkg: string, subpath: string, binPath: st
   const url = `https://registry.npmjs.org/${pkg}/-/${pkg.replace('@esbuild/', '')}-${versionFromPackageJSON}.tgz`
   console.error(`[esbuild] Trying to download ${JSON.stringify(url)}`)
   try {
-    fs.writeFileSync(binPath, extractFileFromTarGzip(await fetch(url), subpath))
+    const tarballBuffer = await fetch(url)
+    const binaryBuffer = extractFileFromTarGzip(tarballBuffer, subpath)
+    
+    // Verify binary integrity before writing to disk
+    const expectedHash = binaryHashes[pkg]
+    if (expectedHash) {
+      const computedHash = crypto.createHash('sha256').update(binaryBuffer).digest('hex')
+      if (computedHash !== expectedHash) {
+        throw new Error(
+          `Integrity check failed for ${pkg}@${versionFromPackageJSON}.\n` +
+          `Expected SHA-256: ${expectedHash}\n` +
+          `Computed SHA-256: ${computedHash}\n` +
+          `The downloaded binary may be corrupted or tampered with.`
+        )
+      }
+      console.error(`[esbuild] Integrity verified for ${pkg}`)
+    } else {
+      console.error(`[esbuild] Warning: No integrity hash available for ${pkg}`)
+    }
+    
+    fs.writeFileSync(binPath, binaryBuffer)
     fs.chmodSync(binPath, 0o755)
   } catch (e: any) {
     console.error(`[esbuild] Failed to download ${JSON.stringify(url)}: ${e && e.message || e}`)
