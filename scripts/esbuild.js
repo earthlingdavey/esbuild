@@ -91,14 +91,20 @@ const buildNeutralLib = (esbuildPath) => {
   fs.writeFileSync(pjPath, JSON.stringify(package_json, null, 2) + '\n')
 }
 
+// Compute SHA-256 hashes of all platform-specific esbuild binaries for integrity verification.
+// These hashes are embedded in the install script so that binaries downloaded directly from
+// npm (when optional dependencies fail) can be verified before execution. This protects against
+// corrupted downloads and tampering.
 const computeBinaryHashes = () => {
   const hashes = {}
   const scopeDir = path.join(repoDir, 'npm', '@esbuild')
   
+  // If platform packages haven't been built yet, return empty hashes
   if (!fs.existsSync(scopeDir)) {
     return hashes
   }
   
+  // Iterate through each platform-specific package directory
   for (const pkgDir of fs.readdirSync(scopeDir)) {
     const pkgPath = path.join(scopeDir, pkgDir)
     if (!fs.statSync(pkgPath).isDirectory()) continue
@@ -111,6 +117,7 @@ const computeBinaryHashes = () => {
     const binarySubpath = isWindows ? 'esbuild.exe' : 'bin/esbuild'
     const binaryPath = path.join(pkgPath, binarySubpath)
     
+    // Hash the binary if it exists
     if (fs.existsSync(binaryPath)) {
       const content = fs.readFileSync(binaryPath)
       hashes[pkgName] = crypto.createHash('sha256').update(content).digest('hex')
