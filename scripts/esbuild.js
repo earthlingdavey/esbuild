@@ -95,6 +95,12 @@ const buildNeutralLib = (esbuildPath) => {
 // These hashes are embedded in the install script so that binaries downloaded directly from
 // npm (when optional dependencies fail) can be verified before execution. This protects against
 // corrupted downloads and tampering.
+//
+// This is important for common scenarios like:
+// - Cross-platform CI/CD (e.g., dev on Windows, CI on Linux with npm ci)
+// - Installing with --no-optional flag
+// - Corporate proxies/firewalls that block optional dependencies
+// - Network issues preventing optional dependency installation
 const computeBinaryHashes = () => {
   const hashes = {}
   const scopeDir = path.join(repoDir, 'npm', '@esbuild')

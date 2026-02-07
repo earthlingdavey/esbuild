@@ -221,8 +221,9 @@ function maybeOptimizePackage(binPath: string): void {
 }
 
 async function downloadDirectlyFromNPM(pkg: string, subpath: string, binPath: string): Promise<void> {
-  // If that fails, the user could have npm configured incorrectly or could not
-  // have npm installed. Try downloading directly from npm as a last resort.
+  // Download directly from npm registry as a fallback when optional dependencies weren't installed.
+  // This commonly happens in cross-platform CI environments (e.g., package-lock.json from Windows
+  // used in Linux CI), when using --no-optional, or when corporate proxies block optional deps.
   const url = `https://registry.npmjs.org/${pkg}/-/${pkg.replace('@esbuild/', '')}-${versionFromPackageJSON}.tgz`
   console.error(`[esbuild] Trying to download ${JSON.stringify(url)}`)
   try {
