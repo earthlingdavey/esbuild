@@ -106,6 +106,7 @@ const computeBinaryHashes = () => {
     const pkgName = `@esbuild/${pkgDir}`
     
     // Determine binary path based on platform
+    // Windows packages are named "win32-*" (see knownWindowsPackages in lib/npm/node-platform.ts)
     const isWindows = pkgDir.startsWith('win32-')
     const binarySubpath = isWindows ? 'esbuild.exe' : 'bin/esbuild'
     const binaryPath = path.join(pkgPath, binarySubpath)
