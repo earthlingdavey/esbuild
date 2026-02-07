@@ -1,4 +1,4 @@
-import { downloadedBinPath, ESBUILD_BINARY_PATH, isValidBinaryPath, pkgAndSubpathForCurrentPlatform, binaryHashes } from './node-platform'
+import { binaryHashes, downloadedBinPath, ESBUILD_BINARY_PATH, isValidBinaryPath, pkgAndSubpathForCurrentPlatform } from './node-platform'
 
 import fs = require('fs')
 import os = require('os')
